@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS users (
   username VARCHAR(50) NOT NULL UNIQUE,
   email VARCHAR(100) NOT NULL UNIQUE,
   password_hash VARCHAR(255),
-  is_verified BOOLEAN DEFAULT TRUE,
+  theme VARCHAR(20) DEFAULT 'light',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -20,5 +20,14 @@ CREATE TABLE IF NOT EXISTS tasks (
   dueDate VARCHAR(50),
   completed BOOLEAN NOT NULL DEFAULT 0,
   createdAt BIGINT NOT NULL,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS task_collaborators (
+  task_id INT NOT NULL,
+  user_id INT NOT NULL,
+  status VARCHAR(20) NOT NULL DEFAULT 'PENDING',
+  PRIMARY KEY (task_id, user_id),
+  FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );

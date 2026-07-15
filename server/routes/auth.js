@@ -2,6 +2,7 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const pool = require('../db');
+const auth = require('../middleware/auth');
 require('dotenv').config();
 
 const router = express.Router();
@@ -13,9 +14,10 @@ router.post('/register', async (req, res) => {
     return res.status(400).json({ error: 'Please provide username, email, and password.' });
   }
 
-  // Google email validation
-  if (!email.toLowerCase().endsWith('@gmail.com') && !email.toLowerCase().endsWith('@googlemail.com')) {
-    return res.status(400).json({ error: 'Only Google email addresses (@gmail.com) are allowed.' });
+  // Standard email format validation
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    return res.status(400).json({ error: 'Please provide a valid email address.' });
   }
 
   // Strong password validation
@@ -83,6 +85,46 @@ router.post('/login', async (req, res) => {
     res.json({ token, user: { id: user.id, username: user.username, email: user.email } });
   } catch (err) {
     console.error('Login error:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Get user profile
+router.get('/me', auth, async (req, res) => {
+  try {
+    const [rows] = await pool.execute('SELECT id, username, email, theme FROM users WHERE id = ?', [req.user.id]);
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    res.json(rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Update user profile
+router.put('/me', auth, async (req, res) => {
+  const { username, email, password, theme } = req.body;
+  
+  try {
+    let sql = 'UPDATE users SET username = ?, email = ?, theme = ?';
+    let params = [username, email, theme || 'light'];
+
+    if (password) {
+      const salt = await bcrypt.genSalt(10);
+      const passwordHash = await bcrypt.hash(password, salt);
+      sql += ', password_hash = ?';
+      params.push(passwordHash);
+    }
+
+    sql += ' WHERE id = ?';
+    params.push(req.user.id);
+
+    await pool.execute(sql, params);
+
+    res.json({ message: 'Profile updated successfully' });
+  } catch (err) {
+    console.error('Update profile error:', err);
     res.status(500).json({ error: 'Server error' });
   }
 });
