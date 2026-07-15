@@ -15,7 +15,7 @@ export default function LoginScreen({ onLoginSuccess, onBack }) {
     e.preventDefault();
     
     try {
-      const endpoint = isLogin ? 'http://192.168.1.15:5000/api/auth/login' : 'http://192.168.1.15:5000/api/auth/register';
+      const endpoint = isLogin ? 'http://192.168.68.227:5000/api/auth/login' : 'http://192.168.68.227:5000/api/auth/register';
       const body = isLogin 
         ? { email, password } 
         : { username, email, password };

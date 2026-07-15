@@ -20,7 +20,7 @@ interface TodoApiService {
 }
 
 object TodoApi {
-    private const val BASE_URL = "http://192.168.1.15:5000/api/"
+    private const val BASE_URL = "http://192.168.68.227:5000/api/"
 
     private val retrofit = Retrofit.Builder()
         .baseUrl(BASE_URL)
