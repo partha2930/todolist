@@ -81,13 +81,13 @@ app.post('/api/tasks', auth, async (req, res) => {
     const [result] = await pool.execute(sql, params);
     const taskId = result.insertId;
 
-    let validCollaboratorIds = [];
+    let validCollaboratorEmails = [];
     if (collaboratorEmails && Array.isArray(collaboratorEmails)) {
       for (const email of collaboratorEmails) {
         const [users] = await pool.execute('SELECT id FROM users WHERE email = ?', [email]);
         if (users.length > 0) {
           const colId = users[0].id;
-          validCollaboratorIds.push(colId);
+          validCollaboratorEmails.push(email);
           await pool.execute('INSERT IGNORE INTO task_collaborators (task_id, user_id, status) VALUES (?, ?, "PENDING")', [taskId, colId]);
         }
       }
@@ -103,7 +103,7 @@ app.post('/api/tasks', auth, async (req, res) => {
       dueDate: params[5],
       completed: params[6] === 1,
       createdAt: params[7],
-      collaboratorIds: validCollaboratorIds
+      collaboratorEmails: validCollaboratorEmails
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -145,13 +145,13 @@ app.put('/api/tasks/:id', auth, async (req, res) => {
 
     await pool.execute(sql, params);
     
-    let validCollaboratorIds = [];
+    let validCollaboratorEmails = [];
     if (isCreator && collaboratorEmails && Array.isArray(collaboratorEmails)) {
       for (const email of collaboratorEmails) {
         const [users] = await pool.execute('SELECT id FROM users WHERE email = ?', [email]);
         if (users.length > 0) {
           const colId = users[0].id;
-          validCollaboratorIds.push(colId);
+          validCollaboratorEmails.push(email);
           await pool.execute('INSERT IGNORE INTO task_collaborators (task_id, user_id, status) VALUES (?, ?, "PENDING")', [id, colId]);
         }
       }
@@ -167,7 +167,7 @@ app.put('/api/tasks/:id', auth, async (req, res) => {
       dueDate, 
       completed: completed === 1, 
       createdAt,
-      collaboratorIds: validCollaboratorIds
+      collaboratorEmails: validCollaboratorEmails
     });
   } catch (err) {
     console.error('Update Task Error:', err);
