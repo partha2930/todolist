@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { User, Mail, Lock, Eye, EyeOff, Save, Moon, Sun, LogOut, Settings as SettingsIcon, Edit2, AlertCircle } from 'lucide-react';
+import { User, Mail, Lock, Eye, EyeOff, Save, Moon, Sun, LogOut, Settings as SettingsIcon, Edit2, AlertCircle, Camera, Trash2 } from 'lucide-react';
 
-export default function SettingsView({ isDarkMode, setIsDarkMode, onLogout, showToast }) {
+export default function SettingsView({ isDarkMode, setIsDarkMode, onLogout, showToast, avatarUrl, setAvatarUrl, onUserUpdated }) {
   const [user, setUser] = useState(() => {
     const saved = JSON.parse(localStorage.getItem('user') || '{}');
     return { username: saved.username || '', email: saved.email || '' };
@@ -13,6 +13,66 @@ export default function SettingsView({ isDarkMode, setIsDarkMode, onLogout, show
   const [isEditing, setIsEditing] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+
+  const handleAvatarUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        const base64Str = reader.result;
+        setAvatarUrl(base64Str);
+        localStorage.setItem('userAvatar', base64Str);
+        
+        try {
+          const token = localStorage.getItem('token');
+          const body = { username: user.username, email: user.email, theme: isDarkMode ? 'dark' : 'light', profilePic: base64Str };
+          const res = await fetch('http://192.168.68.227:5000/api/auth/me', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify(body)
+          });
+          
+          if (res.ok) {
+             const saved = JSON.parse(localStorage.getItem('user') || '{}');
+             const newData = { ...saved, ...body };
+             localStorage.setItem('user', JSON.stringify(newData));
+             if (onUserUpdated) onUserUpdated(newData);
+             showToast('Profile picture saved to cloud! ☁️');
+          } else {
+             showToast('Failed to sync picture to cloud ❌');
+          }
+        } catch (err) {
+          console.error(err);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRemoveAvatar = async () => {
+    setAvatarUrl(null);
+    localStorage.removeItem('userAvatar');
+    
+    try {
+      const token = localStorage.getItem('token');
+      const body = { username: user.username, email: user.email, theme: isDarkMode ? 'dark' : 'light', profilePic: '' };
+      const res = await fetch('http://192.168.68.227:5000/api/auth/me', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify(body)
+      });
+      
+      if (res.ok) {
+         const saved = JSON.parse(localStorage.getItem('user') || '{}');
+         const newData = { ...saved, ...body };
+         localStorage.setItem('user', JSON.stringify(newData));
+         if (onUserUpdated) onUserUpdated(newData);
+         showToast('Profile picture removed! 🗑️');
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   useEffect(() => {
     fetchUserData();
@@ -47,7 +107,8 @@ export default function SettingsView({ isDarkMode, setIsDarkMode, onLogout, show
       const body = { 
         username: user.username, 
         email: user.email,
-        theme: isDarkMode ? 'dark' : 'light'
+        theme: isDarkMode ? 'dark' : 'light',
+        profilePic: avatarUrl
       };
       if (password) body.password = password;
 
@@ -64,6 +125,15 @@ export default function SettingsView({ isDarkMode, setIsDarkMode, onLogout, show
         showToast("Failed to update account details ❌");
         setIsSaving(false);
         return;
+      }
+      
+      
+      const saved = JSON.parse(localStorage.getItem('user') || '{}');
+      const newData = { ...saved, username: user.username, email: user.email, profilePic: avatarUrl };
+      localStorage.setItem('user', JSON.stringify(newData));
+
+      if (onUserUpdated) {
+        onUserUpdated(newData);
       }
       
       setPassword('');
@@ -115,7 +185,54 @@ export default function SettingsView({ isDarkMode, setIsDarkMode, onLogout, show
         <p className="text-slate-500 dark:text-slate-400 font-medium">Manage your account and preferences.</p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-4xl relative">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-5xl relative">
+        
+        {/* Profile Card */}
+        <div className="bg-white dark:bg-zinc-900/80 backdrop-blur-md rounded-3xl p-8 border border-slate-200 dark:border-white/10 shadow-lg relative overflow-hidden flex flex-col items-center justify-center text-center">
+          <div className="absolute top-[-50px] right-[-50px] w-40 h-40 bg-gradient-to-br from-[#7c3aed] to-[#3b82f6] rounded-full blur-[60px] opacity-20 pointer-events-none" />
+          <div className="absolute bottom-[-50px] left-[-50px] w-40 h-40 bg-gradient-to-br from-[#7c3aed] to-blue-500 rounded-full blur-[60px] opacity-10 pointer-events-none" />
+          
+          <div className="w-32 h-32 rounded-[2.5rem] bg-gradient-to-br from-[#7c3aed] to-[#3b82f6] shadow-2xl flex items-center justify-center text-white text-5xl font-black mb-6 border-4 border-white dark:border-zinc-800 relative z-10 overflow-hidden">
+            {avatarUrl ? (
+              <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+            ) : (
+              user.username ? user.username.charAt(0).toUpperCase() : 'U'
+            )}
+          </div>
+          
+          <h2 className="text-3xl font-black text-slate-800 dark:text-white tracking-tight mb-2 relative z-10">
+            {user.username || 'Awesome User'}
+          </h2>
+          <p className="text-slate-500 dark:text-slate-400 font-medium mb-6 relative z-10">
+            {user.email || 'user@example.com'}
+          </p>
+          
+          <div className="w-full h-px bg-slate-200 dark:bg-white/10 mb-6 relative z-10" />
+          
+          <div className="flex gap-4 w-full relative z-10">
+            <div className="flex-[0.8] bg-slate-50 dark:bg-black/20 rounded-2xl p-4 border border-slate-100 dark:border-white/5 transition-transform hover:scale-105 flex flex-col justify-center items-center">
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Status</p>
+              <p className="font-bold text-green-500 flex items-center justify-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" /> Active</p>
+            </div>
+            <div className="flex-[1.2] flex flex-col gap-2">
+              <label className="flex-1 bg-gradient-to-r from-[#7c3aed] to-[#3b82f6] rounded-xl p-2 transition-transform hover:scale-105 cursor-pointer shadow-lg flex items-center justify-center text-white relative overflow-hidden group min-h-[40px]">
+                <input type="file" accept="image/*" onChange={handleAvatarUpload} className="hidden" />
+                <div className="absolute inset-0 bg-white/20 translate-y-[100%] group-hover:translate-y-0 transition-transform duration-300 ease-out" />
+                <Camera size={14} className="mr-1.5 relative z-10" />
+                <p className="font-bold text-[11px] relative z-10">{avatarUrl ? 'Change' : 'Upload'}</p>
+              </label>
+              {avatarUrl && (
+                <button 
+                  onClick={handleRemoveAvatar}
+                  className="flex-1 bg-red-50 dark:bg-red-500/10 text-red-500 dark:text-red-400 rounded-xl p-2 transition-transform hover:scale-105 cursor-pointer shadow-sm flex items-center justify-center relative overflow-hidden group border border-transparent dark:border-red-500/20 min-h-[40px]"
+                >
+                  <Trash2 size={14} className="mr-1.5" />
+                  <p className="font-bold text-[11px]">Remove</p>
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
         
         {/* Account Details Form */}
         <div className="bg-white dark:bg-zinc-900/80 backdrop-blur-md rounded-3xl p-8 border border-slate-200 dark:border-white/10 shadow-lg relative overflow-hidden">
@@ -254,78 +371,7 @@ export default function SettingsView({ isDarkMode, setIsDarkMode, onLogout, show
           </AnimatePresence>
         </div>
 
-        {/* Preferences and Actions */}
-        <div className="space-y-6">
-          <div className="bg-white dark:bg-zinc-900/80 backdrop-blur-md rounded-3xl p-8 border border-slate-200 dark:border-white/10 shadow-lg flex flex-col justify-center h-full gap-8 relative overflow-hidden">
-            
-            <div>
-              <h2 className="text-xl font-bold text-slate-800 dark:text-white mb-2">Appearance</h2>
-              <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">Toggle between light and dark themes.</p>
-              
-              <button
-                onClick={handleThemeChange}
-                className="w-full h-14 flex items-center justify-between px-6 bg-slate-50 dark:bg-[#1a1a24] border border-slate-200 dark:border-white/10 rounded-xl text-slate-700 dark:text-white hover:border-[#7c3aed]/50 transition-all font-bold"
-              >
-                <div className="flex items-center gap-3">
-                  {isDarkMode ? <Moon size={20} className="text-[#7c3aed]" /> : <Sun size={20} className="text-amber-500" />}
-                  {isDarkMode ? 'Dark Mode' : 'Light Mode'}
-                </div>
-                <div className="w-12 h-6 bg-[#7c3aed]/20 rounded-full relative">
-                  <motion.div 
-                    initial={false}
-                    animate={{ x: isDarkMode ? 24 : 0 }}
-                    className="w-6 h-6 bg-[#7c3aed] rounded-full shadow-md"
-                  />
-                </div>
-              </button>
-            </div>
 
-            <div className="pt-8 border-t border-slate-200 dark:border-white/10">
-              <h2 className="text-xl font-bold text-red-500 mb-2">Danger Zone</h2>
-              <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">Log out of your account on this device.</p>
-              
-              <button
-                onClick={() => setShowLogoutConfirm(true)}
-                className="w-full h-14 flex items-center justify-center gap-2 bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-500/20 border border-transparent dark:border-red-500/20 rounded-xl font-bold transition-all"
-              >
-                <LogOut size={20} /> Log Out
-              </button>
-            </div>
-
-            {/* Logout Confirmation Overlay */}
-            <AnimatePresence>
-              {showLogoutConfirm && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="absolute inset-0 bg-white/80 dark:bg-[#181820]/90 backdrop-blur-sm z-20 flex flex-col items-center justify-center p-6 text-center"
-                >
-                  <div className="w-16 h-16 bg-red-100 text-red-500 rounded-full flex items-center justify-center mb-4 shadow-sm">
-                    <LogOut size={32} />
-                  </div>
-                  <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-2">Confirm Logout</h3>
-                  <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">Are you sure you want to log out of your account?</p>
-                  <div className="flex gap-3 w-full">
-                    <button
-                      onClick={() => setShowLogoutConfirm(false)}
-                      className="flex-1 h-12 bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-white rounded-xl font-bold text-sm hover:bg-slate-200 dark:hover:bg-white/10 transition-colors"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      onClick={onLogout}
-                      className="flex-1 h-12 bg-gradient-to-r from-red-500 to-rose-600 text-white rounded-xl font-bold text-sm shadow-lg shadow-red-500/20"
-                    >
-                      Log Out
-                    </button>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-          </div>
-        </div>
       </div>
     </motion.div>
   );
