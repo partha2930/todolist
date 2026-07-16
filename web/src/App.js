@@ -12,10 +12,11 @@ import AddTaskModal from './components/AddTaskModal';
 import Sidebar from './components/Sidebar';
 import RequestsView from './components/RequestsView';
 import SettingsView from './components/SettingsView';
+import { supabase } from './supabaseClient';
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState(() => JSON.parse(localStorage.getItem('user') || '{}'));
-  // Persistence
+  const [session, setSession] = useState(null);
   const [tasks, setTasks] = useState([]);
   const [requests, setRequests] = useState([]);
   const systemPrefersDark = typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -45,21 +46,34 @@ export default function App() {
     }
   }, [toast]);
 
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
+    await supabase.auth.signOut();
     setIsLoggedIn(false);
-    localStorage.removeItem('token');
+    setSession(null);
     localStorage.removeItem('user');
     window.location.reload();
   }, [setIsLoggedIn]);
 
   useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      if (session) setIsLoggedIn(true);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      if (session) setIsLoggedIn(true);
+      else setIsLoggedIn(false);
+    });
+
+    return () => subscription.unsubscribe();
+  }, [setIsLoggedIn]);
+
+  useEffect(() => {
     let intervalId;
-    if (isLoggedIn) {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        logout();
-        return;
-      }
+    if (isLoggedIn && session) {
+      const token = session.access_token;
+
 
       const syncUser = () => {
         fetch('http://192.168.68.227:5000/api/auth/me', {

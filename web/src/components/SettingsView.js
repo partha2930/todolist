@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { User, Mail, Lock, Eye, EyeOff, Save, Moon, Sun, LogOut, Settings as SettingsIcon, Edit2, AlertCircle, Camera } from 'lucide-react';
+import { Settings as SettingsIcon, LogOut, Check, X, Moon, Sun, Camera, Shield, Mail, User, Eye, EyeOff, Save, Edit2, AlertCircle } from 'lucide-react';
+import { supabase } from '../supabaseClient';
 
 export default function SettingsView({ isDarkMode, setIsDarkMode, onLogout, showToast, onUserUpdated }) {
   const [user, setUser] = useState(() => {
@@ -58,7 +59,8 @@ export default function SettingsView({ isDarkMode, setIsDarkMode, onLogout, show
     setIsSaving(true);
     
     try {
-      const token = localStorage.getItem('token');
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
       const body = { 
         username: user.username, 
         email: user.email,
@@ -103,7 +105,8 @@ export default function SettingsView({ isDarkMode, setIsDarkMode, onLogout, show
     setIsDarkMode(newTheme);
     
     try {
-      const token = localStorage.getItem('token');
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
       await fetch('http://192.168.68.227:5000/api/auth/me', {
         method: 'PUT',
         headers: {
