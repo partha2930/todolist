@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Trash2, Check, Calendar, Edit2, Users } from 'lucide-react';
+import { Trash2, Check, Calendar, Edit2 } from 'lucide-react';
 import { clsx } from 'clsx';
 
 const priorityColors = {
@@ -115,7 +115,7 @@ export default function TaskItem({ task, onToggle, onDelete, onEdit, currentUser
         >
           <Edit2 size={18} />
         </button>
-        {(!task.user_id || !currentUser?.id || task.user_id == currentUser.id) && (
+        {(!task.user_id || !currentUser?.id || task.user_id === currentUser.id) && (
           <button
             onClick={() => onDelete(task.id)}
             className="p-2 text-slate-300 hover:text-red-500 transition-colors"

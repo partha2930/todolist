@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus, Search, Moon, Sun, Trash2, List, Menu
 } from 'lucide-react';
+import { clsx } from 'clsx';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import WelcomeScreen from './components/WelcomeScreen';
 import LoginScreen from './components/LoginScreen';
@@ -19,15 +20,19 @@ export default function App() {
   const [session, setSession] = useState(null);
   const [tasks, setTasks] = useState([]);
   const [requests, setRequests] = useState([]);
+  const [avatarUrl, setAvatarUrl] = useState(() => localStorage.getItem('userAvatar'));
   const systemPrefersDark = typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
   const [isDarkMode, setIsDarkMode] = useLocalStorage('darkMode', systemPrefersDark);
   const [isLoggedIn, setIsLoggedIn] = useLocalStorage('loggedIn', false);
+  const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
 
   const [showWelcome, setShowWelcome] = useState(!isLoggedIn);
   const [activeTab, setActiveTab] = useState('tasks');
 
   // App State
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState(null);
+  const [isSearching, setIsSearching] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('ALL');
   const [sortBy, setSortBy] = useState('CREATED_AT');
   const [showAddModal, setShowAddModal] = useState(false);
@@ -51,6 +56,7 @@ export default function App() {
     setIsLoggedIn(false);
     setSession(null);
     localStorage.removeItem('user');
+    localStorage.removeItem('userAvatar');
     window.location.reload();
   }, [setIsLoggedIn]);
 
@@ -136,14 +142,24 @@ export default function App() {
       const token = localStorage.getItem('token');
       if (token) fetchTasksAndRequests(token);
     }
-  }, [activeTab, isLoggedIn]);
+  }, [activeTab, isLoggedIn]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Derived State
   const filteredTasks = useMemo(() => {
-    let result = tasks.filter(task => {
-      const matchesSearch = task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        task.description.toLowerCase().includes(searchQuery.toLowerCase());
+    let source = searchResults !== null ? searchResults : tasks;
+    let result = source.filter(task => {
       const matchesCategory = selectedCategory === 'ALL' || task.category === selectedCategory;
+      
+      // If backend search results exist, we only apply category filtering
+      if (searchResults !== null) {
+        return matchesCategory;
+      }
+
+      // Otherwise fallback to local instant filtering
+      const searchLower = searchQuery.toLowerCase();
+      const titleMatches = (task.title || '').toLowerCase().includes(searchLower);
+      const descMatches = (task.description || '').toLowerCase().includes(searchLower);
+      const matchesSearch = titleMatches || descMatches;
       return matchesSearch && matchesCategory;
     });
 
@@ -160,7 +176,7 @@ export default function App() {
       result.sort((a, b) => pMap[b.priority] - pMap[a.priority]);
     }
     return result;
-  }, [tasks, searchQuery, selectedCategory, sortBy]);
+  }, [tasks, searchQuery, selectedCategory, sortBy, searchResults]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const stats = useMemo(() => {
     const completed = tasks.filter(t => t.completed).length;
@@ -381,8 +397,8 @@ export default function App() {
         />
 
         {/* Main Content Area */}
-        <main className="flex-1 lg:ml-64 min-h-screen transition-all">
-          <div className="max-w-5xl mx-auto px-6 py-8 pb-32">
+        <main className={clsx("flex-1 min-h-screen transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]", isSidebarExpanded ? "lg:ml-[300px]" : "lg:ml-[128px]")}>
+          <div className="max-w-7xl w-full px-6 lg:px-8 py-8 pb-32">
 
             {/* Header (Mobile) */}
             <header className="lg:hidden flex items-center justify-between mb-8 relative z-10">
@@ -407,9 +423,50 @@ export default function App() {
                   <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 max-w-5xl">
                     <div className="w-full lg:w-[280px] shrink-0 space-y-6">
                       <ProgressDashboard completed={stats.completed} total={stats.total} />
-                      <div className="relative z-10">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[#7c3aed]" size={20} />
-                        <input type="text" placeholder="Search your tasks" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full h-14 pl-12 pr-6 bg-white dark:bg-white/5 backdrop-blur-md border border-slate-200 dark:border-white/10 rounded-[1.25rem] focus:border-[#7c3aed]/50 outline-none transition-all text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 shadow-sm dark:shadow-xl dark:shadow-black/20" />
+                      <div className="relative z-10 group">
+                        <Search className={`absolute left-4 top-1/2 -translate-y-1/2 z-10 pointer-events-none transition-colors ${isSearching ? 'text-[#3b82f6] animate-pulse' : 'text-[#7c3aed] group-focus-within:text-[#3b82f6]'}`} size={20} />
+                        <input 
+                          type="text" 
+                          placeholder="Search your tasks... (Press Enter)" 
+                          value={searchQuery} 
+                          onChange={(e) => {
+                            setSearchQuery(e.target.value);
+                            if (e.target.value.trim() === '') setSearchResults(null);
+                          }}
+                          onKeyDown={async (e) => {
+                            if (e.key === 'Enter') {
+                              const keywords = searchQuery.trim().split(/\s+/).filter(Boolean);
+                              if (keywords.length === 0) {
+                                setSearchResults(null);
+                                return;
+                              }
+                              
+                              setIsSearching(true);
+                              try {
+                                const token = localStorage.getItem('token');
+                                const queryStr = keywords.join('+');
+                                const res = await fetch(`http://192.168.68.227:5000/api/tasks/search?q=${queryStr}`, {
+                                  method: 'GET',
+                                  headers: {
+                                    'Authorization': `Bearer ${token}`
+                                  }
+                                });
+                                if (res.ok) {
+                                  const data = await res.json();
+                                  setSearchResults(data);
+                                } else {
+                                  showToast('Backend search failed ❌');
+                                }
+                              } catch (err) {
+                                console.error(err);
+                                showToast('Network error during search ❌');
+                              } finally {
+                                setIsSearching(false);
+                              }
+                            }
+                          }}
+                          className="w-full h-14 pl-12 pr-6 bg-white dark:bg-white/5 backdrop-blur-md border border-slate-200 dark:border-white/10 rounded-[1.25rem] focus:border-[#7c3aed]/50 outline-none transition-all text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 shadow-sm dark:shadow-xl dark:shadow-black/20" 
+                        />
                       </div>
 
                     </div>
@@ -484,7 +541,7 @@ export default function App() {
           {isMobileMenuOpen && (
             <>
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsMobileMenuOpen(false)} className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden" />
-              <motion.div initial={{ x: "-100%" }} animate={{ x: 0 }} exit={{ x: "-100%" }} className="fixed left-0 top-0 bottom-0 w-72 bg-white dark:bg-[#0c0c11] z-50 lg:hidden p-0"><Sidebar activeTab={activeTab} setActiveTab={(t) => { setActiveTab(t); setIsMobileMenuOpen(false); }} isDarkMode={isDarkMode} setIsDarkMode={setIsDarkMode} onLogout={logout} stats={stats} selectedCategory={selectedCategory} setSelectedCategory={setSelectedCategory} pendingCount={requests.length} /></motion.div>
+              <motion.div initial={{ x: "-100%" }} animate={{ x: 0 }} exit={{ x: "-100%" }} className="fixed left-0 top-0 bottom-0 w-72 bg-white dark:bg-[#0c0c11] z-50 lg:hidden p-0"><Sidebar className="w-full h-full" activeTab={activeTab} setActiveTab={(t) => { setActiveTab(t); setIsMobileMenuOpen(false); }} isDarkMode={isDarkMode} setIsDarkMode={setIsDarkMode} onLogout={logout} stats={stats} selectedCategory={selectedCategory} setSelectedCategory={setSelectedCategory} pendingCount={requests.length} currentUser={currentUser} avatarUrl={avatarUrl} /></motion.div>
             </>
           )}
         </AnimatePresence>
