@@ -82,7 +82,7 @@ export default function App() {
 
 
       const syncUser = () => {
-        fetch('http://192.168.68.227:5000/api/auth/me', {
+        fetch('https://todolist-6xt3.onrender.com/api/auth/me', {
           headers: { 'Authorization': `Bearer ${token}` }
         })
           .then(res => {
@@ -113,7 +113,7 @@ export default function App() {
   }, [isLoggedIn, logout]);
 
   const fetchTasksAndRequests = (token) => {
-    fetch('http://192.168.68.227:5000/api/tasks', {
+    fetch('https://todolist-6xt3.onrender.com/api/tasks', {
       headers: { 'Authorization': `Bearer ${token}` }
     })
       .then(res => res.json())
@@ -126,7 +126,7 @@ export default function App() {
         logout();
       });
 
-    fetch('http://192.168.68.227:5000/api/requests', {
+    fetch('https://todolist-6xt3.onrender.com/api/requests', {
       headers: { 'Authorization': `Bearer ${token}` }
     })
       .then(res => res.json())
@@ -193,7 +193,7 @@ export default function App() {
       }
       delete payload.collaborators;
 
-      const res = await fetch('http://192.168.68.227:5000/api/tasks', {
+      const res = await fetch('https://todolist-6xt3.onrender.com/api/tasks', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -206,7 +206,7 @@ export default function App() {
 
       if (payload.collaboratorEmails && payload.collaboratorEmails.length > 0) {
         await Promise.all(payload.collaboratorEmails.map(email => 
-          fetch(`http://192.168.68.227:5000/api/tasks/${newTask.id}/invite`, {
+          fetch(`https://todolist-6xt3.onrender.com/api/tasks/${newTask.id}/invite`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -238,7 +238,7 @@ export default function App() {
     
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`http://192.168.68.227:5000/api/tasks/${id}`, {
+      const res = await fetch(`https://todolist-6xt3.onrender.com/api/tasks/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -258,7 +258,7 @@ export default function App() {
   const deleteTask = async (id) => {
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`http://192.168.68.227:5000/api/tasks/${id}`, {
+      const res = await fetch(`https://todolist-6xt3.onrender.com/api/tasks/${id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -279,7 +279,7 @@ export default function App() {
       }
       delete payload.collaborators;
 
-      const res = await fetch(`http://192.168.68.227:5000/api/tasks/${updatedTask.id}`, {
+      const res = await fetch(`https://todolist-6xt3.onrender.com/api/tasks/${updatedTask.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -291,7 +291,7 @@ export default function App() {
 
       if (payload.collaboratorEmails && payload.collaboratorEmails.length > 0) {
         await Promise.all(payload.collaboratorEmails.map(email => 
-          fetch(`http://192.168.68.227:5000/api/tasks/${updatedTask.id}/invite`, {
+          fetch(`https://todolist-6xt3.onrender.com/api/tasks/${updatedTask.id}/invite`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -316,7 +316,7 @@ export default function App() {
     const completedTasks = tasks.filter(t => t.completed);
     try {
       const token = localStorage.getItem('token');
-      await Promise.all(completedTasks.map(t => fetch(`http://192.168.68.227:5000/api/tasks/${t.id}`, {
+      await Promise.all(completedTasks.map(t => fetch(`https://todolist-6xt3.onrender.com/api/tasks/${t.id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       })));
@@ -341,7 +341,7 @@ export default function App() {
 
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`http://192.168.68.227:5000/api/requests/${taskId}`, {
+      const res = await fetch(`https://todolist-6xt3.onrender.com/api/requests/${taskId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -352,7 +352,7 @@ export default function App() {
       if (!res.ok) throw new Error('Failed to update request');
 
       if (status === 'ACCEPTED') {
-        const tasksRes = await fetch('http://192.168.68.227:5000/api/tasks', {
+        const tasksRes = await fetch('https://todolist-6xt3.onrender.com/api/tasks', {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         if (tasksRes.ok) {
@@ -445,7 +445,7 @@ export default function App() {
                               try {
                                 const token = localStorage.getItem('token');
                                 const queryStr = keywords.join('+');
-                                const res = await fetch(`http://192.168.68.227:5000/api/tasks/search?q=${queryStr}`, {
+                                const res = await fetch(`https://todolist-6xt3.onrender.com/api/tasks/search?q=${queryStr}`, {
                                   method: 'GET',
                                   headers: {
                                     'Authorization': `Bearer ${token}`

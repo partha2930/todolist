@@ -25,7 +25,7 @@ export default function SettingsView({ isDarkMode, setIsDarkMode, onLogout, show
         try {
           const token = localStorage.getItem('token');
           const body = { username: user.username, email: user.email, theme: isDarkMode ? 'dark' : 'light', profilePic: base64Str };
-          const res = await fetch('http://192.168.68.227:5000/api/auth/me', {
+          const res = await fetch('https://todolist-6xt3.onrender.com/api/auth/me', {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
             body: JSON.stringify(body)
@@ -55,7 +55,7 @@ export default function SettingsView({ isDarkMode, setIsDarkMode, onLogout, show
     try {
       const token = localStorage.getItem('token');
       const body = { username: user.username, email: user.email, theme: isDarkMode ? 'dark' : 'light', profilePic: '' };
-      const res = await fetch('http://192.168.68.227:5000/api/auth/me', {
+      const res = await fetch('https://todolist-6xt3.onrender.com/api/auth/me', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify(body)
@@ -80,7 +80,7 @@ export default function SettingsView({ isDarkMode, setIsDarkMode, onLogout, show
   const fetchUserData = async () => {
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch('http://192.168.68.227:5000/api/auth/me', {
+      const res = await fetch('https://todolist-6xt3.onrender.com/api/auth/me', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {
@@ -127,7 +127,7 @@ export default function SettingsView({ isDarkMode, setIsDarkMode, onLogout, show
       };
       if (password) body.password = password;
 
-      const res = await fetch('http://192.168.68.227:5000/api/auth/me', {
+      const res = await fetch('https://todolist-6xt3.onrender.com/api/auth/me', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -165,7 +165,7 @@ export default function SettingsView({ isDarkMode, setIsDarkMode, onLogout, show
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
-      await fetch('http://192.168.68.227:5000/api/auth/me', {
+      await fetch('https://todolist-6xt3.onrender.com/api/auth/me', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
