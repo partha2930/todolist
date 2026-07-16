@@ -31,3 +31,31 @@ CREATE TABLE IF NOT EXISTS task_collaborators (
   FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
+
+-- See all users
+SELECT id, username, email FROM users;
+
+
+-- See all tasks
+SELECT * FROM tasks;
+
+-- View Pending/Accepted Collaborations
+SELECT * FROM task_collaborators;
+
+-- Advanced: View Tasks alongside their Creator's username
+SELECT tasks.id, tasks.title, users.username AS creator 
+FROM tasks 
+JOIN users ON tasks.user_id = users.id;
+
+
+-- See users and their tasks together
+SELECT 
+    users.id AS user_id, 
+    users.username, 
+    users.email, 
+    tasks.id AS task_id, 
+    tasks.title, 
+    tasks.priority, 
+    tasks.completed
+FROM users
+LEFT JOIN tasks ON users.id = tasks.user_id;
