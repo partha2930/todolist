@@ -37,7 +37,6 @@ router.put('/me', auth, async (req, res) => {
   try {
     let sql = 'UPDATE public.users SET username = $1, theme = $2';
     let params = [username, theme || 'light'];
-
     if (profilePic !== undefined) {
       sql += ', "profilePic" = $3';
       params.push(profilePic);
