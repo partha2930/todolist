@@ -297,7 +297,7 @@ app.put('/api/requests/:taskId', auth, async (req, res) => {
     }
 
     const [result] = await pool.execute(
-      'UPDATE task_collaborators SET status = "ACCEPTED" WHERE task_id = ? AND user_id = ? AND status = "PENDING"',
+      `UPDATE task_collaborators SET status = 'ACCEPTED' WHERE task_id = ? AND user_id = ? AND status = 'PENDING'`,
       [taskId, req.user.id]
     );
 
